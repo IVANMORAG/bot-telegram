@@ -1,0 +1,544 @@
+{
+  "name": "MRI and Emotion Analysis Workflow - FINAL FIXED",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mri-upload",
+        "options": {
+          "allowedOrigins": "*",
+          "binaryPropertyName": "",
+          "ignoreBots": false,
+          "noResponseBody": false
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-280, 60],
+      "id": "0cb59647-3b4f-4944-a73a-ba53d88724da",
+      "name": "Recibir Imagen MRI",
+      "webhookId": "d749855e-117e-4bba-b912-fd6f97d2365c"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mri-tumor.onrender.com/predict",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "file"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-60, 60],
+      "id": "4e5defe7-4d4a-40c0-8410-b9844af23254",
+      "name": "Analizar Imagen MRI"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "60037df9-1814-43e2-8531-f8627ab84a49",
+              "leftValue": "={{ $node[\"Analizar Imagen MRI\"].json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [160, 60],
+      "id": "07e31162-8d9a-4ca1-a4d0-4dbddf86557d",
+      "name": "If MRI Error"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c43c4d19-59fc-48ab-a8a1-8ae63a057360",
+              "name": "diagnosis",
+              "value": "={{ $node[\"Analizar Imagen MRI\"].json.result }}",
+              "type": "string"
+            },
+            {
+              "id": "2faf5621-b509-4608-9fee-24efdff43284",
+              "name": "confidence",
+              "value": "={{ $node[\"Analizar Imagen MRI\"].json.confidence }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [380, 160],
+      "id": "20326b20-6b78-4378-8b95-378cf6663bd0",
+      "name": "Preparar Datos MRI"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://marketing-m28z.onrender.com/api/mri-report",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"diagnosis\": \"{{ $node['Preparar Datos MRI'].json.diagnosis }}\",\n  \"confidence\": {{ $node['Preparar Datos MRI'].json.confidence }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 160],
+      "id": "c3273cbd-4c32-4b41-996e-78338e1e4913",
+      "name": "Generar Reporte Marketing"
+    },
+    {
+      "parameters": {
+        "url": "https://marketing-m28z.onrender.com/api/task9-visualization",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [820, 160],
+      "id": "47f0dd71-41f3-42de-954d-cd4417488766",
+      "name": "Obtener Visualización Task9"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://marketing-0i6j.onrender.com/static/mri-report.png",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, 80],
+      "id": "download-mri-chart",
+      "name": "Descargar Gráfica MRI"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://marketing-0i6j.onrender.com/static/autoencoder.png",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, 240],
+      "id": "download-autoencoder-chart",
+      "name": "Descargar Gráfica Autoencoder"
+    },
+    {
+      "parameters": {
+        "fromEmail": "ivanmoragarcia412@gmail.com",
+        "toEmail": "ivanmoragarcia412@gmail.com",
+        "subject": "Resultado del Análisis MRI",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Resultado del Análisis MRI</title>\n</head>\n<body style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;\">\n    <div style=\"background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);\">\n        <h1 style=\"background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 25px; border-radius: 10px; text-align: center; margin: 0 0 30px 0;\">🧠 Resultado del Análisis MRI</h1>\n        \n        <div style=\"background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px;\">\n            <h2 style=\"color: #1976d2; margin-top: 0;\">📊 Resultados del Diagnóstico</h2>\n            <p style=\"font-size: 18px; margin: 10px 0;\"><strong>Diagnóstico:</strong> <span style=\"color: #d32f2f; font-weight: bold;\">{{ $node[\"Preparar Datos MRI\"].json.diagnosis || \"No disponible\" }}</span></p>\n            <p style=\"font-size: 18px; margin: 10px 0;\"><strong>Confianza:</strong> <span style=\"color: #388e3c; font-weight: bold;\">{{ ($node[\"Preparar Datos MRI\"].json.confidence * 100).toFixed(2) }}%</span></p>\n        </div>\n        \n        <div style=\"background: #fff3e0; padding: 20px; border-radius: 10px; margin-bottom: 25px;\">\n            <h3 style=\"color: #f57c00; margin-top: 0;\">📈 Gráficas del Análisis</h3>\n            <p style=\"font-size: 16px;\">📎 <strong>Las gráficas están adjuntadas a este correo:</strong></p>\n            <ul style=\"font-size: 14px; color: #555;\">\n                <li>📊 <strong>mri-report.png</strong> - Gráfica de confianza del diagnóstico</li>\n                <li>🤖 <strong>autoencoder.png</strong> - Visualización del modelo Autoencoder</li>\n            </ul>\n        </div>\n        \n        <div style=\"background: #f3e5f5; padding: 20px; border-radius: 10px; margin-bottom: 25px;\">\n            <h3 style=\"color: #7b1fa2; margin-top: 0;\">📚 Descripción del Autoencoder</h3>\n            <pre style=\"white-space: pre-wrap; font-family: 'Courier New', monospace; background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 12px; overflow-x: auto;\">{{ $node[\"Obtener Visualización Task9\"].json.plain_table || \"No se pudo generar la tabla\" }}</pre>\n        </div>\n        \n        <div style=\"text-align: center; margin-top: 30px; padding: 20px; background: #e8f5e8; border-radius: 10px;\">\n            <p style=\"color: #2e7d32; font-size: 14px; margin: 0;\">🤖 Análisis generado automáticamente</p>\n            <p style=\"color: #666; font-size: 12px; margin: 5px 0 0 0;\">Revisa los archivos adjuntos para ver las gráficas completas</p>\n        </div>\n    </div>\n</body>\n</html>",
+        "attachments": "={{ \n  const attachments = [];\n  \n  if ($node[\"Descargar Gráfica MRI\"].binary && $node[\"Descargar Gráfica MRI\"].binary.data) {\n    attachments.push({\n      name: 'mri-report.png',\n      data: $node[\"Descargar Gráfica MRI\"].binary.data.data,\n      type: 'n8n-nodes-base.binary'\n    });\n  }\n  \n  if ($node[\"Descargar Gráfica Autoencoder\"].binary && $node[\"Descargar Gráfica Autoencoder\"].binary.data) {\n    attachments.push({\n      name: 'autoencoder.png',\n      data: $node[\"Descargar Gráfica Autoencoder\"].binary.data.data,\n      type: 'n8n-nodes-base.binary'\n    });\n  }\n  \n  return attachments;\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1260, 160],
+      "id": "d69dbef9-5e9f-46b1-9e85-28552914f8d6",
+      "name": "Enviar Resultado MRI",
+      "credentials": {
+        "smtp": {
+          "id": "ewHeT6JiFL6OHZh6",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "ivanmoragarcia412@gmail.com",
+        "toEmail": "ivanmoragarcia412@gmail.com",
+        "subject": "Error en Análisis MRI",
+        "html": "=<div style=\"font-family: Arial, sans-serif; background: #ffebee; padding: 20px; border-radius: 10px;\">\n    <h2 style=\"color: #c62828;\">❌ Error en el Análisis MRI</h2>\n    <p style=\"font-size: 16px;\">Se produjo un error durante el análisis:</p>\n    <div style=\"background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #f44336;\">\n        <code>{{ $node[\"Analizar Imagen MRI\"].json.error }}</code>\n    </div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [380, -40],
+      "id": "06a14f17-f936-47fd-9c5f-ffdbcdb90143",
+      "name": "Notificar Error MRI",
+      "credentials": {
+        "smtp": {
+          "id": "ewHeT6JiFL6OHZh6",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "emotion-upload",
+        "options": {
+          "allowedOrigins": "*",
+          "binaryPropertyName": "",
+          "ignoreBots": false,
+          "noResponseBody": false
+        },
+        "responseCode": 200,
+        "responseData": "={\n  \"status\": \"success\"\n}"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-280, 360],
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Recibir Datos Emociones",
+      "webhookId": "abcd1234-5678-9012-efab-345678901234"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "78901234-5678-9012-3456-abcdef123456",
+              "leftValue": "={{ $json.body.images ? $json.body.images.length : 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equal",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-60, 360],
+      "id": "b2c3d4e5-f6g7-8901-2345-678901234567",
+      "name": "If No Images"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "23456789-0123-4567-8901-bcdef1234567",
+              "name": "images",
+              "value": "={{ $json.body.images || [] }}",
+              "type": "array"
+            },
+            {
+              "id": "emotion-data",
+              "name": "emotion",
+              "value": "={{ $json.body.emotion || 'Ver en imagen' }}",
+              "type": "string"
+            },
+            {
+              "id": "chat-id-data",
+              "name": "chat_id",
+              "value": "={{ $json.body.chat_id || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [160, 360],
+      "id": "e5f6g7h8-i9j0-1234-ef01-567890123456",
+      "name": "Preparar Datos Emociones"
+    },
+    {
+      "parameters": {
+        "jsCode": "// CREAR LINKS EN LUGAR DE INTENTAR DESCARGAR\nconst images = $json.images || [];\nlet htmlImagesSection = '';\n\nconsole.log('=== CREANDO LINKS DIRECTOS ===');\nconsole.log('Imágenes recibidas:', images.length);\n\nif (images.length > 0) {\n  htmlImagesSection += `\n    <div style=\"background: #e8f5e8; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center;\">\n      <h3 style=\"color: #2e7d32; margin-top: 0;\">✅ ¡Análisis Completado Exitosamente!</h3>\n      <p style=\"color: #388e3c; font-size: 16px; margin: 5px 0;\">Se procesaron <strong>${images.length} imágenes</strong> con detección de emociones</p>\n    </div>\n  `;\n  \n  htmlImagesSection += `\n    <div style=\"background: #fff3e0; padding: 20px; border-radius: 10px; margin-bottom: 20px;\">\n      <h3 style=\"color: #f57c00; margin-top: 0; text-align: center;\">🖼️ Tus Imágenes Procesadas</h3>\n      <p style=\"color: #666; font-size: 14px; text-align: center; margin-bottom: 25px;\">Haz clic en los enlaces para ver cada imagen con las emociones detectadas:</p>\n  `;\n  \n  // Crear un enlace elegante para cada imagen\n  for (let i = 0; i < images.length; i++) {\n    const imageUrl = `https://secure-personally-goldfish.ngrok-free.app${images[i]}`;\n    htmlImagesSection += `\n      <div style=\"background: white; border: 2px solid #2196f3; border-radius: 12px; padding: 20px; margin-bottom: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">\n        <h4 style=\"color: #1976d2; margin: 0 0 15px 0; font-size: 18px;\">📸 Imagen ${i + 1} - Análisis de Emociones</h4>\n        <div style=\"background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 15px;\">\n          <p style=\"margin: 0; color: #666; font-size: 14px;\">✨ Emociones detectadas y analizadas con IA</p>\n        </div>\n        <a href=\"${imageUrl}\" target=\"_blank\" style=\"display: inline-block; background: linear-gradient(135deg, #42a5f5, #1976d2); color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 3px 6px rgba(0,0,0,0.2); transition: all 0.3s ease;\">\n          🔍 Ver Imagen Procesada ${i + 1}\n        </a>\n        <p style=\"font-size: 11px; color: #999; margin: 10px 0 0 0; word-break: break-all;\">📎 ${imageUrl}</p>\n      </div>\n    `;\n  }\n  \n  htmlImagesSection += `\n      <div style=\"background: #f3e5f5; padding: 15px; border-radius: 10px; margin-top: 20px; text-align: center;\">\n        <p style=\"color: #7b1fa2; font-size: 14px; margin: 0;\">💡 <strong>Tip:</strong> Los enlaces se abren en una nueva pestaña para una mejor experiencia</p>\n      </div>\n    </div>\n  `;\n} else {\n  htmlImagesSection = `\n    <div style=\"background: #ffebee; padding: 20px; border-radius: 10px; border: 2px solid #f44336; text-align: center;\">\n      <h4 style=\"color: #d32f2f; margin: 0 0 10px 0;\">⚠️ No se recibieron imágenes</h4>\n      <p style=\"color: #666; margin: 0;\">No se encontraron imágenes para procesar.</p>\n    </div>\n  `;\n}\n\nconsole.log('HTML generado exitosamente');\n\nreturn [{\n  json: {\n    totalImages: images.length,\n    emotion: 'Ver en enlaces',\n    message: `Se crearon ${images.length} enlaces directos a las imágenes procesadas`,\n    htmlImagesSection: htmlImagesSection,\n    imageUrls: images.map(img => `https://secure-personally-goldfish.ngrok-free.app${img}`)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [380, 360],
+      "id": "create-links",
+      "name": "Crear Enlaces Directos"
+    },
+    {
+      "parameters": {
+        "fromEmail": "ivanmoragarcia412@gmail.com",
+        "toEmail": "ivanmoragarcia412@gmail.com",
+        "subject": "🎯 Resultado del Análisis de Emociones - Enlaces Directos",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Resultado del Análisis de Emociones</title>\n</head>\n<body style=\"font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;\">\n    <div style=\"background: white; padding: 30px; border-radius: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.1);\">\n        \n        <!-- Header -->\n        <div style=\"background: linear-gradient(135deg, #ff6b6b, #ff8e53); color: white; padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 30px;\">\n            <h1 style=\"margin: 0; font-size: 28px; font-weight: bold;\">😊 Análisis de Emociones</h1>\n            <p style=\"margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;\">Resultados listos para visualizar</p>\n        </div>\n        \n        <!-- Status -->\n        <div style=\"background: #e8f5e8; padding: 25px; border-radius: 15px; margin-bottom: 30px; text-align: center; border-left: 6px solid #4caf50;\">\n            <h2 style=\"color: #2e7d32; margin: 0 0 10px 0; font-size: 22px;\">✅ Procesamiento Completado</h2>\n            <p style=\"font-size: 18px; margin: 10px 0; color: #388e3c;\"><strong>Estado:</strong> Análisis exitoso</p>\n            <p style=\"font-size: 16px; margin: 0; color: #2e7d32;\"><strong>Imágenes procesadas:</strong> <span style=\"background: #4caf50; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold;\">{{ $json.totalImages }}</span></p>\n        </div>\n        \n        <!-- Main Content -->\n        <div style=\"margin-bottom: 30px;\">\n            {{ $json.htmlImagesSection }}\n        </div>\n        \n        <!-- Info Section -->\n        <div style=\"background: #e3f2fd; padding: 25px; border-radius: 15px; margin-bottom: 30px;\">\n            <h3 style=\"color: #1976d2; margin: 0 0 15px 0; font-size: 20px;\">🔍 Acerca del Análisis</h3>\n            <div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;\">\n                <div style=\"background: white; padding: 15px; border-radius: 10px; text-align: center;\">\n                    <div style=\"font-size: 24px; margin-bottom: 5px;\">🎯</div>\n                    <div style=\"color: #555; font-weight: 500;\">Detección Facial</div>\n                </div>\n                <div style=\"background: white; padding: 15px; border-radius: 10px; text-align: center;\">\n                    <div style=\"font-size: 24px; margin-bottom: 5px;\">😊</div>\n                    <div style=\"color: #555; font-weight: 500;\">Clasificación IA</div>\n                </div>\n                <div style=\"background: white; padding: 15px; border-radius: 10px; text-align: center;\">\n                    <div style=\"font-size: 24px; margin-bottom: 5px;\">📊</div>\n                    <div style=\"color: #555; font-weight: 500;\">Análisis Confianza</div>\n                </div>\n                <div style=\"background: white; padding: 15px; border-radius: 10px; text-align: center;\">\n                    <div style=\"font-size: 24px; margin-bottom: 5px;\">🖼️</div>\n                    <div style=\"color: #555; font-weight: 500;\">Visualización</div>\n                </div>\n            </div>\n        </div>\n        \n        <!-- Footer -->\n        <div style=\"text-align: center; padding: 25px; background: #f5f5f5; border-radius: 15px;\">\n            <p style=\"color: #2e7d32; font-size: 16px; margin: 0 0 5px 0; font-weight: 500;\">🤖 Análisis generado por IA</p>\n            <p style=\"color: #666; font-size: 14px; margin: 0;\">{{ $json.message }}</p>\n        </div>\n        \n    </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [600, 360],
+      "id": "f6g7h8i9-j0k1-2345-f012-678901234567",
+      "name": "Enviar Email con Enlaces",
+      "credentials": {
+        "smtp": {
+          "id": "ewHeT6JiFL6OHZh6",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// DEBUG COMPLETO Y MANEJO DE ERRORES\nconst allItems = $input.all();\nlet htmlImagesSection = '';\nlet validImages = 0;\nlet debugInfo = '';\n\n// Log detallado para debug\nconsole.log('=== DEBUG COMPLETO ===');\nconsole.log('Total items recibidos:', allItems.length);\n\ndebugInfo += `Total items: ${allItems.length}\\n`;\n\n// Analizar cada item en detalle\nfor (let i = 0; i < allItems.length; i++) {\n  const item = allItems[i];\n  \n  debugInfo += `\\nItem ${i}:\\n`;\n  debugInfo += `- Has JSON: ${!!item.json}\\n`;\n  debugInfo += `- Has Binary: ${!!item.binary}\\n`;\n  \n  if (item.json) {\n    debugInfo += `- JSON keys: ${Object.keys(item.json).join(', ')}\\n`;\n    debugInfo += `- Image URL: ${item.json.imageUrl || 'N/A'}\\n`;\n  }\n  \n  if (item.binary) {\n    debugInfo += `- Binary keys: ${Object.keys(item.binary).join(', ')}\\n`;\n    if (item.binary.data) {\n      debugInfo += `- Has data: true\\n`;\n      debugInfo += `- MIME type: ${item.binary.data.mimeType || 'N/A'}\\n`;\n      debugInfo += `- Data length: ${item.binary.data.data ? item.binary.data.data.length : 0}\\n`;\n      \n      if (item.binary.data.data) {\n        const base64Data = item.binary.data.data;\n        const mimeType = item.binary.data.mimeType || 'image/jpeg';\n        \n        // Verificaciones más permisivas\n        if (base64Data.length > 100) {\n          validImages++;\n          debugInfo += `- ✅ Imagen válida ${validImages}\\n`;\n          \n          htmlImagesSection += `\n            <div style=\"margin-bottom: 25px; text-align: center; background: #f5f5f5; padding: 15px; border-radius: 10px; border: 1px solid #ddd;\">\n              <h4 style=\"margin: 0 0 15px 0; color: #1976d2; font-size: 16px;\">📸 Análisis de Emociones - Imagen ${validImages}</h4>\n              <div style=\"border: 3px solid #2196f3; border-radius: 12px; padding: 5px; display: inline-block; background: white;\">\n                <img src=\"data:${mimeType};base64,${base64Data}\" alt=\"Emotion Analysis ${validImages}\" style=\"max-width: 500px; max-height: 400px; width: auto; height: auto; border-radius: 8px; display: block;\" />\n              </div>\n              <p style=\"margin: 15px 0 0 0; font-size: 14px; color: #666; background: #e3f2fd; padding: 8px; border-radius: 5px;\">✅ Emociones detectadas y analizadas</p>\n              <div style=\"font-size: 11px; color: #999; margin-top: 5px;\">Base64 length: ${base64Data.length} | Type: ${mimeType}</div>\n            </div>\n          `;\n        } else {\n          debugInfo += `- ❌ Imagen rechazada: tamaño muy pequeño (${base64Data.length})\\n`;\n        }\n      }\n    } else {\n      debugInfo += `- No data in binary\\n`;\n    }\n  } else {\n    debugInfo += `- No binary data\\n`;\n  }\n}\n\n// Si no hay imágenes válidas, mostrar debug detallado\nif (validImages === 0) {\n  htmlImagesSection = `\n    <div style=\"margin-bottom: 25px; text-align: left; background: #ffebee; padding: 20px; border-radius: 10px; border: 2px solid #f44336;\">\n      <h4 style=\"margin: 0 0 15px 0; color: #d32f2f;\">⚠️ Error al cargar imágenes</h4>\n      <p style=\"margin: 0 0 15px 0; color: #666;\">No se pudieron cargar las imágenes del análisis.</p>\n      <div style=\"background: #f5f5f5; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 11px; white-space: pre-line;\">\n        <strong>🔍 Debug Info:</strong>\\n${debugInfo}\n      </div>\n    </div>\n  `;\n}\n\nconsole.log('=== RESULTADO ===');\nconsole.log(`Imágenes válidas: ${validImages}`);\nconsole.log('Debug info:', debugInfo);\n\nreturn [{\n  json: {\n    totalItems: allItems.length,\n    validImages: validImages,\n    emotion: 'Ver en imagen',\n    message: `Se procesaron ${validImages} imágenes de ${allItems.length} items`,\n    htmlImagesSection: htmlImagesSection,\n    debugInfo: debugInfo\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [820, 360],
+      "id": "aggregate-images",
+      "name": "Debug y Crear HTML"
+    },
+    {
+      "parameters": {
+        "fromEmail": "ivanmoragarcia412@gmail.com",
+        "toEmail": "ivanmoragarcia412@gmail.com",
+        "subject": "Resultado del Análisis de Emociones",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Resultado del Análisis de Emociones</title>\n</head>\n<body style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;\">\n    <div style=\"background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);\">\n        <h1 style=\"background: linear-gradient(135deg, #ff6b6b, #ff8e53); color: white; padding: 25px; border-radius: 10px; text-align: center; margin: 0 0 30px 0;\">😊 Resultado del Análisis de Emociones</h1>\n        \n        <div style=\"background: #e8f5e8; padding: 20px; border-radius: 10px; margin-bottom: 25px; text-align: center;\">\n            <h2 style=\"color: #2e7d32; margin-top: 0;\">✅ Análisis Completado</h2>\n            <p style=\"font-size: 18px; margin: 10px 0;\"><strong>Estado:</strong> <span style=\"color: #388e3c; font-weight: bold;\">Procesamiento exitoso</span></p>\n            <p style=\"font-size: 16px;\"><strong>Imágenes procesadas:</strong> <span style=\"color: #388e3c; font-weight: bold;\">{{ $json.totalImages }}</span></p>\n        </div>\n        \n        <div style=\"background: #fff3e0; padding: 20px; border-radius: 10px; margin-bottom: 25px;\">\n            <h3 style=\"color: #f57c00; margin-top: 0;\">🖼️ Imágenes con Emociones Detectadas</h3>\n            <p style=\"font-size: 14px; color: #666; margin-bottom: 20px;\">Las siguientes imágenes muestran las emociones detectadas:</p>\n            \n            <div style=\"display: block;\">\n                {{ $json.htmlImagesSection }}\n            </div>\n        </div>\n        \n        <div style=\"background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 25px;\">\n            <h3 style=\"color: #1976d2; margin-top: 0;\">🔍 Información del Análisis</h3>\n            <ul style=\"font-size: 14px; color: #555; margin: 0; padding-left: 20px;\">\n                <li>🎯 Algoritmo de detección facial aplicado</li>\n                <li>😊 Clasificación automática de emociones</li>\n                <li>📊 Análisis de confianza incluido</li>\n                <li>🖼️ Visualizaciones con marcadores de emociones</li>\n            </ul>\n        </div>\n        \n        <div style=\"text-align: center; margin-top: 30px; padding: 20px; background: #e8f5e8; border-radius: 10px;\">\n            <p style=\"color: #2e7d32; font-size: 14px; margin: 0;\">🤖 Análisis generado automáticamente por IA</p>\n            <p style=\"color: #666; font-size: 12px; margin: 5px 0 0 0;\">Las imágenes se muestran directamente en este correo</p>\n        </div>\n    </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1040, 360],
+      "id": "f6g7h8i9-j0k1-2345-f012-678901234567",
+      "name": "Enviar Email con Imágenes",
+      "credentials": {
+        "smtp": {
+          "id": "ewHeT6JiFL6OHZh6",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "ivanmoragarcia412@gmail.com",
+        "toEmail": "ivanmoragarcia412@gmail.com",
+        "subject": "Error en Análisis de Emociones",
+        "html": "=<div style=\"font-family: Arial, sans-serif; background: #ffebee; padding: 20px; border-radius: 10px;\">\n    <h2 style=\"color: #c62828;\">❌ Error en el Análisis de Emociones</h2>\n    <p style=\"font-size: 16px;\">No se recibieron imágenes procesadas.</p>\n    <div style=\"background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #f44336;\">\n        <p><strong>Datos recibidos:</strong></p>\n        <pre style=\"font-family: monospace; font-size: 12px; overflow-x: auto;\">{{ JSON.stringify($json.body, null, 2) }}</pre>\n    </div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [160, 460],
+      "id": "cdef1234-5678-9012-3456-abcdef123456",
+      "name": "Notificar Error Emociones",
+      "credentials": {
+        "smtp": {
+          "id": "ewHeT6JiFL6OHZh6",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Recibir Imagen MRI": {
+      "main": [
+        [
+          {
+            "node": "Analizar Imagen MRI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analizar Imagen MRI": {
+      "main": [
+        [
+          {
+            "node": "If MRI Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If MRI Error": {
+      "main": [
+        [
+          {
+            "node": "Notificar Error MRI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Datos MRI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Datos MRI": {
+      "main": [
+        [
+          {
+            "node": "Generar Reporte Marketing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Reporte Marketing": {
+      "main": [
+        [
+          {
+            "node": "Obtener Visualización Task9",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Descargar Gráfica MRI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Visualización Task9": {
+      "main": [
+        [
+          {
+            "node": "Descargar Gráfica Autoencoder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar Gráfica MRI": {
+      "main": [
+        [
+          {
+            "node": "Enviar Resultado MRI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar Gráfica Autoencoder": {
+      "main": [
+        [
+          {
+            "node": "Enviar Resultado MRI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recibir Datos Emociones": {
+      "main": [
+        [
+          {
+            "node": "If No Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If No Images": {
+      "main": [
+        [
+          {
+            "node": "Notificar Error Emociones",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Datos Emociones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Datos Emociones": {
+      "main": [
+        [
+          {
+            "node": "Crear Enlaces Directos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Enlaces Directos": {
+      "main": [
+        [
+          {
+            "node": "Enviar Email con Enlaces",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "12345678-9012-3456-7890-abcdef123456",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "329126096d0fc575da02ab6258fd197341bc1f614f3daa139e3c28b915bd5fda"
+  },
+  "id": "16UNdu22EAHUFjpB",
+  "tags": []
+}
+            

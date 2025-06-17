@@ -1,0 +1,35 @@
+import os
+import logging
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv(override=True)
+
+# Configurar logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Endpoints de las aplicaciones
+BRAIN_MRI_URL = "https://mri-tumor.onrender.com/predict"
+MARKETING_MRI_REPORT_URL = "https://marketing-m28z.onrender.com/api/mri-report"
+MARKETING_BASE_URL = "https://marketing-m28z.onrender.com/api"
+STATIC_URL = "https://marketing-m28z.onrender.com/static"
+EMOTION_API_URL = "https://secure-personally-goldfish.ngrok-free.app"  # Endpoint de tu API
+
+# Directorios
+UPLOADS_DIR = "uploads"
+STATIC_DIR = "static"
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+os.makedirs(STATIC_DIR, exist_ok=True)
+
+# Debug: Verifica la ruta actual y archivos
+logger.info(f"\nDirectorio actual: {os.getcwd()}")
+logger.info(f"Archivos en el directorio: {os.listdir()}\n")
+
+# Obtener token
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+if not TOKEN:
+    raise ValueError("ERROR: Token no encontrado. Verifica tu archivo .env")
+logger.info(f"Token leído: {TOKEN}\n")
